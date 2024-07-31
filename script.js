@@ -34,7 +34,8 @@ let timerInterval;
 const difficulties = {
     easy: { initialSpeed: 120, speedIncrease: 1, obstaclesPerLevel: 1, timeBonus: 15 },
     medium: { initialSpeed: 100, speedIncrease: 2, obstaclesPerLevel: 2, timeBonus: 10 },
-    hard: { initialSpeed: 80, speedIncrease: 3, obstaclesPerLevel: 3, timeBonus: 5 }
+    hard: { initialSpeed: 80, speedIncrease: 3, obstaclesPerLevel: 3, timeBonus: 5 },
+    insane: { initialSpeed: 60, speedIncrease: 4, obstaclesPerLevel: 4, timeBonus: 3 }
 };
 
 const powerUpTypes = ['speedBoost', 'shield', 'doublePoints'];
@@ -44,13 +45,65 @@ const activePowerUps = {
     doublePoints: false
 };
 
+const particleCanvas = document.getElementById('particleCanvas');
+const particleCtx = particleCanvas.getContext('2d');
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = Math.random() * 5 + 1;
+        this.speedX = Math.random() * 3 - 1.5;
+        this.speedY = Math.random() * 3 - 1.5;
+    }
+
+    update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.size > 0.2) this.size -= 0.1;
+    }
+
+    draw() {
+        particleCtx.fillStyle = this.color;
+        particleCtx.beginPath();
+        particleCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        particleCtx.fill();
+    }
+}
+
+let particles = [];
+
+function createParticles(x, y, color, amount) {
+    for (let i = 0; i < amount; i++) {
+        particles.push(new Particle(x, y, color));
+    }
+}
+
+function handleParticles() {
+    for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].size <= 0.2) {
+            particles.splice(i, 1);
+            i--;
+        }
+    }
+}
+
+function clearParticleCanvas() {
+    particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+}
+
 function drawGame() {
     clearCanvas();
+    clearParticleCanvas();
     moveSnake();
     drawSnake();
     drawFood();
     drawObstacles();
     drawPowerUps();
+    handleParticles();
     checkCollision();
     updateScore();
     updateLevel();
@@ -58,7 +111,7 @@ function drawGame() {
 }
 
 function clearCanvas() {
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -75,6 +128,8 @@ function moveSnake() {
             levelUp();
         }
         addTime(difficulties[difficultySelect.value].timeBonus);
+        createParticles(head.x * gridSize, head.y * gridSize, 'yellow', 20);
+        playEatSound();
     } else {
         snake.pop();
     }
@@ -87,11 +142,15 @@ function drawSnake() {
         const hue = (index * 10) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
         if (activePowerUps.shield && index === 0) {
-            ctx.strokeStyle = 'blue';
+            ctx.strokeStyle = '#0ff';
             ctx.lineWidth = 2;
             ctx.strokeRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
         }
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+        
+        if (index === 0) {
+            createParticles(segment.x * gridSize, segment.y * gridSize, `hsl(${hue}, 100%, 50%)`, 1);
+        }
     });
 }
 
@@ -100,6 +159,8 @@ function drawFood() {
     ctx.beginPath();
     ctx.arc((food.x * gridSize) + (gridSize / 2), (food.y * gridSize) + (gridSize / 2), gridSize / 2 - 2, 0, 2 * Math.PI);
     ctx.fill();
+    
+    createParticles((food.x * gridSize) + (gridSize / 2), (food.y * gridSize) + (gridSize / 2), 'red', 1);
 }
 
 function drawObstacles() {
@@ -190,6 +251,7 @@ function checkPowerUpCollision() {
 function activatePowerUp(type) {
     activePowerUps[type] = true;
     updatePowerUpDisplay();
+    playPowerUpSound();
     setTimeout(() => {
         activePowerUps[type] = false;
         updatePowerUpDisplay();
@@ -225,6 +287,8 @@ function gameOver() {
     updateHighScore();
     finalScoreElement.textContent = score;
     gameOverScreen.classList.remove('hidden');
+    playGameOverSound();
+    stopBackgroundMusic();
 }
 
 function resetGame() {
@@ -315,6 +379,7 @@ function startGame() {
     generateFood();
     gameLoop = setInterval(drawGame, gameSpeed);
     timerInterval = setInterval(updateTimer, 1000);
+    startBackgroundMusic();
 }
 
 function pauseGame() {
@@ -358,26 +423,35 @@ function addTime(seconds) {
     timeElement.textContent = timeLeft;
 }
 
+// Audio
+const eatSound = new Audio('eat.wav');
+const gameOverSound = new Audio('gameover.wav');
+const powerUpSound = new Audio('powerup.wav');
+const backgroundMusic = new Audio('background_music.mp3');
+backgroundMusic.loop = true;
+
+function playEatSound() {
+    eatSound.currentTime = 0;
+    eatSound.play();
+}
+
+function playGameOverSound() {
+    gameOverSound.play();
+}
+
+function playPowerUpSound() {
+    powerUpSound.currentTime = 0;
+    powerUpSound.play();
+}
+
+function startBackgroundMusic() {
+    backgroundMusic.play();
+}
+
+function stopBackgroundMusic() {
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0;
+}
+
 // Event listeners
-document.addEventListener('keydown', (e) => {
-    if (e.keyCode === 80) { // 'P' key
-        if (isPaused) {
-            resumeGame();
-        } else {
-            pauseGame();
-        }
-    } else {
-        changeDirection(e);
-    }
-});
-
-startButton.addEventListener('click', startGame);
-restartButton.addEventListener('click', startGame);
-resumeButton.addEventListener('click', resumeGame);
-
-// Initialize high score from localStorage
-highScore = localStorage.getItem('snakeHighScore') || 0;
-highScoreElement.textContent = highScore;
-
-// Show start screen initially
-startScreen.classList.remove('hidden');
+document.

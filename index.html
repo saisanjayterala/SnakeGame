@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game - Version 4</title>
+    <title>Crazy Snake Game - Version 5</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        <div id="game-overlay">
-            <div id="start-screen">
-                <h1>Snake Game</h1>
-                <button id="start-button">Start Game</button>
-                <div id="difficulty-selector">
-                    <label for="difficulty">Difficulty:</label>
-                    <select id="difficulty">
-                        <option value="easy">Easy</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="hard">Hard</option>
-                    </select>
+    <div id="game-wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div id="particle-container"></div>
+            <div id="game-overlay">
+                <div id="start-screen">
+                    <h1 class="glitch" data-text="CRAZY SNAKE">CRAZY SNAKE</h1>
+                    <button id="start-button" class="neon-button">Start Game</button>
+                    <div id="difficulty-selector">
+                        <label for="difficulty">Difficulty:</label>
+                        <select id="difficulty" class="neon-select">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="game-over-screen" class="hidden">
+                    <h2 class="glitch" data-text="GAME OVER">GAME OVER</h2>
+                    <p>Your Score: <span id="final-score"></span></p>
+                    <button id="restart-button" class="neon-button">Play Again</button>
+                </div>
+                <div id="pause-screen" class="hidden">
+                    <h2 class="glitch" data-text="PAUSED">PAUSED</h2>
+                    <button id="resume-button" class="neon-button">Resume</button>
                 </div>
             </div>
-            <div id="game-over-screen" class="hidden">
-                <h2>Game Over</h2>
-                <p>Your Score: <span id="final-score"></span></p>
-                <button id="restart-button">Play Again</button>
-            </div>
-            <div id="pause-screen" class="hidden">
-                <h2>Game Paused</h2>
-                <button id="resume-button">Resume</button>
-            </div>
         </div>
-    </div>
-    <div id="game-info">
-        <div id="score">Score: <span id="scoreValue">0</span></div>
-        <div id="high-score">High Score: <span id="highScoreValue">0</span></div>
-        <div id="level">Level: <span id="levelValue">1</span></div>
-        <div id="time">Time: <span id="timeValue">60</span>s</div>
-    </div>
-    <div id="power-ups">
-        <div id="speed-boost" class="power-up">Speed Boost</div>
-        <div id="shield" class="power-up">Shield</div>
-        <div id="double-points" class="power-up">Double Points</div>
+        <div id="game-info">
+            <div id="score" class="neon-text">Score: <span id="scoreValue">0</span></div>
+            <div id="high-score" class="neon-text">High Score: <span id="highScoreValue">0</span></div>
+            <div id="level" class="neon-text">Level: <span id="levelValue">1</span></div>
+            <div id="time" class="neon-text">Time: <span id="timeValue">60</span>s</div>
+        </div>
+        <div id="power-ups">
+            <div id="speed-boost" class="power-up">Speed Boost</div>
+            <div id="shield" class="power-up">Shield</div>
+            <div id="double-points" class="power-up">Double Points</div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
