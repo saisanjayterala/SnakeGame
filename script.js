@@ -1,17 +1,24 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('scoreValue');
+const highScoreElement = document.getElementById('highScoreValue');
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const finalScoreElement = document.getElementById('final-score');
+const startButton = document.getElementById('start-button');
+const restartButton = document.getElementById('restart-button');
 
 const gridSize = 20;
 const tileCount = canvas.width / gridSize;
 
-let snake = [
-    { x: 10, y: 10 },
-];
+let snake = [{ x: 10, y: 10 }];
 let food = { x: 15, y: 15 };
 let dx = 0;
 let dy = 0;
 let score = 0;
+let highScore = 0;
+let gameSpeed = 100;
+let gameLoop;
 
 function drawGame() {
     clearCanvas();
@@ -34,6 +41,7 @@ function moveSnake() {
     if (head.x === food.x && head.y === food.y) {
         score++;
         generateFood();
+        increaseSpeed();
     } else {
         snake.pop();
     }
@@ -41,14 +49,21 @@ function moveSnake() {
 
 function drawSnake() {
     ctx.fillStyle = 'green';
-    snake.forEach(segment => {
+    snake.forEach((segment, index) => {
+        if (index === 0) {
+            ctx.fillStyle = 'darkgreen';
+        } else {
+            ctx.fillStyle = 'green';
+        }
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
     });
 }
 
 function drawFood() {
     ctx.fillStyle = 'red';
-    ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+    ctx.beginPath();
+    ctx.arc((food.x * gridSize) + (gridSize / 2), (food.y * gridSize) + (gridSize / 2), gridSize / 2 - 2, 0, 2 * Math.PI);
+    ctx.fill();
 }
 
 function generateFood() {
@@ -59,14 +74,21 @@ function generateFood() {
 function checkCollision() {
     const head = snake[0];
     if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
-        resetGame();
+        gameOver();
     }
 
     for (let i = 1; i < snake.length; i++) {
         if (head.x === snake[i].x && head.y === snake[i].y) {
-            resetGame();
+            gameOver();
         }
     }
+}
+
+function gameOver() {
+    clearInterval(gameLoop);
+    updateHighScore();
+    finalScoreElement.textContent = score;
+    gameOverScreen.classList.remove('hidden');
 }
 
 function resetGame() {
@@ -75,10 +97,19 @@ function resetGame() {
     dx = 0;
     dy = 0;
     score = 0;
+    gameSpeed = 100;
+    updateScore();
 }
 
 function updateScore() {
     scoreElement.textContent = score;
+}
+
+function updateHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        highScoreElement.textContent = highScore;
+    }
 }
 
 function changeDirection(e) {
@@ -102,6 +133,39 @@ function changeDirection(e) {
     }
 }
 
-document.addEventListener('keydown', changeDirection);
+function increaseSpeed() {
+    if (gameSpeed > 50) {
+        gameSpeed -= 2;
+        clearInterval(gameLoop);
+        gameLoop = setInterval(drawGame, gameSpeed);
+    }
+}
 
-setInterval(drawGame, 100);
+function startGame() {
+    resetGame();
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    gameLoop = setInterval(drawGame, gameSpeed);
+}
+
+document.addEventListener('keydown', changeDirection);
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+
+// Initialize high score from localStorage
+highScore = localStorage.getItem('snakeHighScore') || 0;
+highScoreElement.textContent = highScore;
+
+// Save high score to localStorage when updated
+function saveHighScore() {
+    localStorage.setItem('snakeHighScore', highScore);
+}
+
+// Update the updateHighScore function
+function updateHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        highScoreElement.textContent = highScore;
+        saveHighScore();
+    }
+}
