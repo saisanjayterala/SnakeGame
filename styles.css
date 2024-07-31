@@ -32,7 +32,7 @@ body {
     text-align: center;
 }
 
-#start-screen, #game-over-screen {
+#start-screen, #game-over-screen, #pause-screen {
     background-color: rgba(0, 0, 0, 0.8);
     padding: 20px;
     border-radius: 10px;
@@ -51,14 +51,24 @@ button {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s;
+    margin: 5px;
 }
 
 button:hover {
     background-color: #45a049;
 }
 
-#score, #high-score {
+#score, #high-score, #level {
     margin-top: 10px;
     font-size: 20px;
     font-weight: bold;
+}
+
+#difficulty-selector {
+    margin-top: 10px;
+}
+
+#difficulty {
+    padding: 5px;
+    font-size: 16px;
 }

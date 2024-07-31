@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game - Version 2</title>
+    <title>Snake Game - Version 3</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,16 +13,29 @@
             <div id="start-screen">
                 <h1>Snake Game</h1>
                 <button id="start-button">Start Game</button>
+                <div id="difficulty-selector">
+                    <label for="difficulty">Difficulty:</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
             </div>
             <div id="game-over-screen" class="hidden">
                 <h2>Game Over</h2>
                 <p>Your Score: <span id="final-score"></span></p>
                 <button id="restart-button">Play Again</button>
             </div>
+            <div id="pause-screen" class="hidden">
+                <h2>Game Paused</h2>
+                <button id="resume-button">Resume</button>
+            </div>
         </div>
     </div>
     <div id="score">Score: <span id="scoreValue">0</span></div>
     <div id="high-score">High Score: <span id="highScoreValue">0</span></div>
+    <div id="level">Level: <span id="levelValue">1</span></div>
     <script src="script.js"></script>
 </body>
 </html>

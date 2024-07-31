@@ -2,31 +2,46 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('scoreValue');
 const highScoreElement = document.getElementById('highScoreValue');
+const levelElement = document.getElementById('levelValue');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
+const pauseScreen = document.getElementById('pause-screen');
 const finalScoreElement = document.getElementById('final-score');
 const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart-button');
+const resumeButton = document.getElementById('resume-button');
+const difficultySelect = document.getElementById('difficulty');
 
 const gridSize = 20;
 const tileCount = canvas.width / gridSize;
 
 let snake = [{ x: 10, y: 10 }];
 let food = { x: 15, y: 15 };
+let obstacles = [];
 let dx = 0;
 let dy = 0;
 let score = 0;
 let highScore = 0;
+let level = 1;
 let gameSpeed = 100;
 let gameLoop;
+let isPaused = false;
+
+const difficulties = {
+    easy: { initialSpeed: 120, speedIncrease: 1, obstaclesPerLevel: 1 },
+    medium: { initialSpeed: 100, speedIncrease: 2, obstaclesPerLevel: 2 },
+    hard: { initialSpeed: 80, speedIncrease: 3, obstaclesPerLevel: 3 }
+};
 
 function drawGame() {
     clearCanvas();
     moveSnake();
     drawSnake();
     drawFood();
+    drawObstacles();
     checkCollision();
     updateScore();
+    updateLevel();
 }
 
 function clearCanvas() {
@@ -42,19 +57,18 @@ function moveSnake() {
         score++;
         generateFood();
         increaseSpeed();
+        if (score % 5 === 0) {
+            levelUp();
+        }
     } else {
         snake.pop();
     }
 }
 
 function drawSnake() {
-    ctx.fillStyle = 'green';
     snake.forEach((segment, index) => {
-        if (index === 0) {
-            ctx.fillStyle = 'darkgreen';
-        } else {
-            ctx.fillStyle = 'green';
-        }
+        const hue = (index * 10) % 360;
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
     });
 }
@@ -66,9 +80,26 @@ function drawFood() {
     ctx.fill();
 }
 
+function drawObstacles() {
+    ctx.fillStyle = 'gray';
+    obstacles.forEach(obstacle => {
+        ctx.fillRect(obstacle.x * gridSize, obstacle.y * gridSize, gridSize - 2, gridSize - 2);
+    });
+}
+
 function generateFood() {
-    food.x = Math.floor(Math.random() * tileCount);
-    food.y = Math.floor(Math.random() * tileCount);
+    do {
+        food.x = Math.floor(Math.random() * tileCount);
+        food.y = Math.floor(Math.random() * tileCount);
+    } while (isColliding(food) || isOnObstacle(food));
+}
+
+function isColliding(position) {
+    return snake.some(segment => segment.x === position.x && segment.y === position.y);
+}
+
+function isOnObstacle(position) {
+    return obstacles.some(obstacle => obstacle.x === position.x && obstacle.y === position.y);
 }
 
 function checkCollision() {
@@ -82,6 +113,10 @@ function checkCollision() {
             gameOver();
         }
     }
+
+    if (isOnObstacle(head)) {
+        gameOver();
+    }
 }
 
 function gameOver() {
@@ -94,74 +129,24 @@ function gameOver() {
 function resetGame() {
     snake = [{ x: 10, y: 10 }];
     food = { x: 15, y: 15 };
+    obstacles = [];
     dx = 0;
     dy = 0;
     score = 0;
-    gameSpeed = 100;
+    level = 1;
     updateScore();
+    updateLevel();
+    setInitialSpeed();
 }
 
 function updateScore() {
     scoreElement.textContent = score;
 }
 
-function updateHighScore() {
-    if (score > highScore) {
-        highScore = score;
-        highScoreElement.textContent = highScore;
-    }
+function updateLevel() {
+    levelElement.textContent = level;
 }
 
-function changeDirection(e) {
-    const LEFT_KEY = 37;
-    const RIGHT_KEY = 39;
-    const UP_KEY = 38;
-    const DOWN_KEY = 40;
-
-    if (e.keyCode === LEFT_KEY && dx === 0) {
-        dx = -1;
-        dy = 0;
-    } else if (e.keyCode === UP_KEY && dy === 0) {
-        dx = 0;
-        dy = -1;
-    } else if (e.keyCode === RIGHT_KEY && dx === 0) {
-        dx = 1;
-        dy = 0;
-    } else if (e.keyCode === DOWN_KEY && dy === 0) {
-        dx = 0;
-        dy = 1;
-    }
-}
-
-function increaseSpeed() {
-    if (gameSpeed > 50) {
-        gameSpeed -= 2;
-        clearInterval(gameLoop);
-        gameLoop = setInterval(drawGame, gameSpeed);
-    }
-}
-
-function startGame() {
-    resetGame();
-    startScreen.classList.add('hidden');
-    gameOverScreen.classList.add('hidden');
-    gameLoop = setInterval(drawGame, gameSpeed);
-}
-
-document.addEventListener('keydown', changeDirection);
-startButton.addEventListener('click', startGame);
-restartButton.addEventListener('click', startGame);
-
-// Initialize high score from localStorage
-highScore = localStorage.getItem('snakeHighScore') || 0;
-highScoreElement.textContent = highScore;
-
-// Save high score to localStorage when updated
-function saveHighScore() {
-    localStorage.setItem('snakeHighScore', highScore);
-}
-
-// Update the updateHighScore function
 function updateHighScore() {
     if (score > highScore) {
         highScore = score;
@@ -169,3 +154,108 @@ function updateHighScore() {
         saveHighScore();
     }
 }
+
+function changeDirection(e) {
+    if (isPaused) return;
+
+    const LEFT_KEY = 37;
+    const RIGHT_KEY = 39;
+    const UP_KEY = 38;
+    const DOWN_KEY = 40;
+
+    const newDx = e.keyCode === LEFT_KEY ? -1 : e.keyCode === RIGHT_KEY ? 1 : dx;
+    const newDy = e.keyCode === UP_KEY ? -1 : e.keyCode === DOWN_KEY ? 1 : dy;
+
+    if ((newDx !== -dx || newDy !== -dy) && (newDx !== dx || newDy !== dy)) {
+        dx = newDx;
+        dy = newDy;
+    }
+}
+
+function increaseSpeed() {
+    const difficulty = difficulties[difficultySelect.value];
+    if (gameSpeed > 50) {
+        gameSpeed -= difficulty.speedIncrease;
+        clearInterval(gameLoop);
+        gameLoop = setInterval(drawGame, gameSpeed);
+    }
+}
+
+function levelUp() {
+    level++;
+    updateLevel();
+    addObstacles();
+}
+
+function addObstacles() {
+    const difficulty = difficulties[difficultySelect.value];
+    for (let i = 0; i < difficulty.obstaclesPerLevel; i++) {
+        let obstacle;
+        do {
+            obstacle = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+        } while (isColliding(obstacle) || isOnObstacle(obstacle) || (obstacle.x === food.x && obstacle.y === food.y));
+        obstacles.push(obstacle);
+    }
+}
+
+function startGame() {
+    resetGame();
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    pauseScreen.classList.add('hidden');
+    setInitialSpeed();
+    generateFood();
+    gameLoop = setInterval(drawGame, gameSpeed);
+}
+
+function pauseGame() {
+    if (!isPaused) {
+        clearInterval(gameLoop);
+        pauseScreen.classList.remove('hidden');
+        isPaused = true;
+    }
+}
+
+function resumeGame() {
+    if (isPaused) {
+        pauseScreen.classList.add('hidden');
+        gameLoop = setInterval(drawGame, gameSpeed);
+        isPaused = false;
+    }
+}
+
+function setInitialSpeed() {
+    const difficulty = difficulties[difficultySelect.value];
+    gameSpeed = difficulty.initialSpeed;
+}
+
+function saveHighScore() {
+    localStorage.setItem('snakeHighScore', highScore);
+}
+
+// Event listeners
+document.addEventListener('keydown', (e) => {
+    if (e.keyCode === 80) { // 'P' key
+        if (isPaused) {
+            resumeGame();
+        } else {
+            pauseGame();
+        }
+    } else {
+        changeDirection(e);
+    }
+});
+
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+resumeButton.addEventListener('click', resumeGame);
+
+// Initialize high score from localStorage
+highScore = localStorage.getItem('snakeHighScore') || 0;
+highScoreElement.textContent = highScore;
+
+// Show start screen initially
+startScreen.classList.remove('hidden');
