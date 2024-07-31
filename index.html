@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game - Version 3</title>
+    <title>Snake Game - Version 4</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -33,9 +33,17 @@
             </div>
         </div>
     </div>
-    <div id="score">Score: <span id="scoreValue">0</span></div>
-    <div id="high-score">High Score: <span id="highScoreValue">0</span></div>
-    <div id="level">Level: <span id="levelValue">1</span></div>
+    <div id="game-info">
+        <div id="score">Score: <span id="scoreValue">0</span></div>
+        <div id="high-score">High Score: <span id="highScoreValue">0</span></div>
+        <div id="level">Level: <span id="levelValue">1</span></div>
+        <div id="time">Time: <span id="timeValue">60</span>s</div>
+    </div>
+    <div id="power-ups">
+        <div id="speed-boost" class="power-up">Speed Boost</div>
+        <div id="shield" class="power-up">Shield</div>
+        <div id="double-points" class="power-up">Double Points</div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>

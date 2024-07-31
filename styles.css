@@ -58,9 +58,15 @@ button:hover {
     background-color: #45a049;
 }
 
-#score, #high-score, #level {
+#game-info {
+    display: flex;
+    justify-content: space-between;
+    width: 400px;
     margin-top: 10px;
-    font-size: 20px;
+}
+
+#game-info div {
+    font-size: 18px;
     font-weight: bold;
 }
 
@@ -71,4 +77,26 @@ button:hover {
 #difficulty {
     padding: 5px;
     font-size: 16px;
+}
+
+#power-ups {
+    display: flex;
+    justify-content: space-between;
+    width: 400px;
+    margin-top: 10px;
+}
+
+.power-up {
+    padding: 5px 10px;
+    background-color: #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    opacity: 0.5;
+}
+
+.power-up.active {
+    opacity: 1;
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: white;
 }

@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('scoreValue');
 const highScoreElement = document.getElementById('highScoreValue');
 const levelElement = document.getElementById('levelValue');
+const timeElement = document.getElementById('timeValue');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const pauseScreen = document.getElementById('pause-screen');
@@ -18,6 +19,7 @@ const tileCount = canvas.width / gridSize;
 let snake = [{ x: 10, y: 10 }];
 let food = { x: 15, y: 15 };
 let obstacles = [];
+let powerUps = [];
 let dx = 0;
 let dy = 0;
 let score = 0;
@@ -26,11 +28,20 @@ let level = 1;
 let gameSpeed = 100;
 let gameLoop;
 let isPaused = false;
+let timeLeft = 60;
+let timerInterval;
 
 const difficulties = {
-    easy: { initialSpeed: 120, speedIncrease: 1, obstaclesPerLevel: 1 },
-    medium: { initialSpeed: 100, speedIncrease: 2, obstaclesPerLevel: 2 },
-    hard: { initialSpeed: 80, speedIncrease: 3, obstaclesPerLevel: 3 }
+    easy: { initialSpeed: 120, speedIncrease: 1, obstaclesPerLevel: 1, timeBonus: 15 },
+    medium: { initialSpeed: 100, speedIncrease: 2, obstaclesPerLevel: 2, timeBonus: 10 },
+    hard: { initialSpeed: 80, speedIncrease: 3, obstaclesPerLevel: 3, timeBonus: 5 }
+};
+
+const powerUpTypes = ['speedBoost', 'shield', 'doublePoints'];
+const activePowerUps = {
+    speedBoost: false,
+    shield: false,
+    doublePoints: false
 };
 
 function drawGame() {
@@ -39,9 +50,11 @@ function drawGame() {
     drawSnake();
     drawFood();
     drawObstacles();
+    drawPowerUps();
     checkCollision();
     updateScore();
     updateLevel();
+    updatePowerUpDisplay();
 }
 
 function clearCanvas() {
@@ -54,21 +67,30 @@ function moveSnake() {
     snake.unshift(head);
 
     if (head.x === food.x && head.y === food.y) {
-        score++;
+        const pointsEarned = activePowerUps.doublePoints ? 2 : 1;
+        score += pointsEarned;
         generateFood();
         increaseSpeed();
         if (score % 5 === 0) {
             levelUp();
         }
+        addTime(difficulties[difficultySelect.value].timeBonus);
     } else {
         snake.pop();
     }
+
+    checkPowerUpCollision();
 }
 
 function drawSnake() {
     snake.forEach((segment, index) => {
         const hue = (index * 10) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        if (activePowerUps.shield && index === 0) {
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+        }
         ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
     });
 }
@@ -87,11 +109,42 @@ function drawObstacles() {
     });
 }
 
+function drawPowerUps() {
+    powerUps.forEach(powerUp => {
+        ctx.fillStyle = getPowerUpColor(powerUp.type);
+        ctx.fillRect(powerUp.x * gridSize, powerUp.y * gridSize, gridSize - 2, gridSize - 2);
+    });
+}
+
+function getPowerUpColor(type) {
+    switch (type) {
+        case 'speedBoost': return 'yellow';
+        case 'shield': return 'blue';
+        case 'doublePoints': return 'purple';
+        default: return 'white';
+    }
+}
+
 function generateFood() {
     do {
         food.x = Math.floor(Math.random() * tileCount);
         food.y = Math.floor(Math.random() * tileCount);
-    } while (isColliding(food) || isOnObstacle(food));
+    } while (isColliding(food) || isOnObstacle(food) || isOnPowerUp(food));
+}
+
+function generatePowerUp() {
+    if (powerUps.length < 2 && Math.random() < 0.1) {
+        const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+        let powerUp;
+        do {
+            powerUp = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount),
+                type: type
+            };
+        } while (isColliding(powerUp) || isOnObstacle(powerUp) || (powerUp.x === food.x && powerUp.y === food.y));
+        powerUps.push(powerUp);
+    }
 }
 
 function isColliding(position) {
@@ -100,6 +153,10 @@ function isColliding(position) {
 
 function isOnObstacle(position) {
     return obstacles.some(obstacle => obstacle.x === position.x && obstacle.y === position.y);
+}
+
+function isOnPowerUp(position) {
+    return powerUps.some(powerUp => powerUp.x === position.x && powerUp.y === position.y);
 }
 
 function checkCollision() {
@@ -114,13 +171,57 @@ function checkCollision() {
         }
     }
 
-    if (isOnObstacle(head)) {
+    if (isOnObstacle(head) && !activePowerUps.shield) {
         gameOver();
     }
 }
 
+function checkPowerUpCollision() {
+    const head = snake[0];
+    powerUps = powerUps.filter(powerUp => {
+        if (powerUp.x === head.x && powerUp.y === head.y) {
+            activatePowerUp(powerUp.type);
+            return false;
+        }
+        return true;
+    });
+}
+
+function activatePowerUp(type) {
+    activePowerUps[type] = true;
+    updatePowerUpDisplay();
+    setTimeout(() => {
+        activePowerUps[type] = false;
+        updatePowerUpDisplay();
+    }, 10000); // Power-up lasts for 10 seconds
+
+    if (type === 'speedBoost') {
+        const currentSpeed = gameSpeed;
+        gameSpeed /= 2;
+        clearInterval(gameLoop);
+        gameLoop = setInterval(drawGame, gameSpeed);
+        setTimeout(() => {
+            gameSpeed = currentSpeed;
+            clearInterval(gameLoop);
+            gameLoop = setInterval(drawGame, gameSpeed);
+        }, 10000);
+    }
+}
+
+function updatePowerUpDisplay() {
+    powerUpTypes.forEach(type => {
+        const element = document.getElementById(type.replace(/([A-Z])/g, '-$1').toLowerCase());
+        if (activePowerUps[type]) {
+            element.classList.add('active');
+        } else {
+            element.classList.remove('active');
+        }
+    });
+}
+
 function gameOver() {
     clearInterval(gameLoop);
+    clearInterval(timerInterval);
     updateHighScore();
     finalScoreElement.textContent = score;
     gameOverScreen.classList.remove('hidden');
@@ -130,12 +231,16 @@ function resetGame() {
     snake = [{ x: 10, y: 10 }];
     food = { x: 15, y: 15 };
     obstacles = [];
+    powerUps = [];
     dx = 0;
     dy = 0;
     score = 0;
     level = 1;
+    timeLeft = 60;
+    Object.keys(activePowerUps).forEach(key => activePowerUps[key] = false);
     updateScore();
     updateLevel();
+    updatePowerUpDisplay();
     setInitialSpeed();
 }
 
@@ -196,7 +301,7 @@ function addObstacles() {
                 x: Math.floor(Math.random() * tileCount),
                 y: Math.floor(Math.random() * tileCount)
             };
-        } while (isColliding(obstacle) || isOnObstacle(obstacle) || (obstacle.x === food.x && obstacle.y === food.y));
+        } while (isColliding(obstacle) || isOnObstacle(obstacle) || (obstacle.x === food.x && obstacle.y === food.y) || isOnPowerUp(obstacle));
         obstacles.push(obstacle);
     }
 }
@@ -209,11 +314,13 @@ function startGame() {
     setInitialSpeed();
     generateFood();
     gameLoop = setInterval(drawGame, gameSpeed);
+    timerInterval = setInterval(updateTimer, 1000);
 }
 
 function pauseGame() {
     if (!isPaused) {
         clearInterval(gameLoop);
+        clearInterval(timerInterval);
         pauseScreen.classList.remove('hidden');
         isPaused = true;
     }
@@ -223,6 +330,7 @@ function resumeGame() {
     if (isPaused) {
         pauseScreen.classList.add('hidden');
         gameLoop = setInterval(drawGame, gameSpeed);
+        timerInterval = setInterval(updateTimer, 1000);
         isPaused = false;
     }
 }
@@ -234,6 +342,20 @@ function setInitialSpeed() {
 
 function saveHighScore() {
     localStorage.setItem('snakeHighScore', highScore);
+}
+
+function updateTimer() {
+    timeLeft--;
+    timeElement.textContent = timeLeft;
+    if (timeLeft <= 0) {
+        gameOver();
+    }
+    generatePowerUp();
+}
+
+function addTime(seconds) {
+    timeLeft += seconds;
+    timeElement.textContent = timeLeft;
 }
 
 // Event listeners
